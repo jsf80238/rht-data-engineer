@@ -1,16 +1,13 @@
-import logging
-from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-
-import pandas as pd
 # Imports above are standard Python
 # Imports below are 3rd-party
+import pandas as pd
 from xml_to_dict import XMLtoDict
 # Imports below are custom
-from lib.base import Logger, Database, DATAFILE_LOCATION
+from lib.base import Logger, Database
 
 
 class Tag(StrEnum):
@@ -50,6 +47,7 @@ class RepairOrder:
     technician: str
 
 
+DATAFILE_LOCATION = Path("..") / "data"
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S"
 logger = Logger().get_logger()
 

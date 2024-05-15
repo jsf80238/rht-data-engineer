@@ -15,28 +15,6 @@ import pendulum
 
 
 DATABASE_LOCATION = Path.home() / "rht.db"
-DATAFILE_LOCATION = Path("..") / "data"
-
-
-class C(enum.StrEnum):
-    BLACK_SQUARE = unicodedata.lookup("BLACK SQUARE")  # ■, x25A0
-    CHAR = "CHAR"
-    CLASSPATH = "CLASSPATH"
-    CLASS_NAME = "class_name"
-    CONNECTION_STRING = "connection_string"
-    CSV_EXTENSION = ".csv"
-    DATABASE = "database"
-    DATE = "DATE"
-    DECIMAL = "DECIMAL"
-    EXCEL_EXTENSION = ".xlsx"
-    FLOAT = "FLOAT"
-    JAR = "jar"
-    JDBC = "jdbc"
-    NUMBER = "NUMBER"
-    PARQUET_EXTENSION = ".parquet"
-    PORT_NUMBER = "port_number"
-    SQL_EXTENSION = ".sql"
-    VARCHAR = "VARCHAR"
 
 
 class Logger:
@@ -84,6 +62,7 @@ class Database:
     """
     Wrapper around a database connection module.
     Plainly this is overkill for SQLite, but gives a general approach for an enterprise database.
+    Also has built-in logging of the exact SQL executed and from which file/line number it was called
     """
     __instance = None
 
@@ -101,7 +80,7 @@ class Database:
         """
         cls.logger = Logger().get_logger()
         if not cls.__instance:
-            cls.logger.info(f"Connecting to {DATABASE_LOCATION} ...")
+            cls.logger.info(f"Connecting to database {DATABASE_LOCATION} ...")
             cls.database_connection = sqlite3.connect(DATABASE_LOCATION)
             cls.logger.info("... connected.")
             cls.__instance = object.__new__(cls)
@@ -209,34 +188,6 @@ class Database:
                 return None
             else:
                 return [None] * len(column_list)
-
-
-def dedent_sql(s):
-    """
-    Remove leading spaces from all lines of a SQL query.
-    Useful for logging.
-
-    :param s: query
-    :return: cleaned-up version of query
-    """
-    return "\n".join([x.lstrip() for x in s.splitlines()])
-
-
-def get_line_count(file_path: Union[str, Path]) -> int:
-    """
-    See https://stackoverflow.com/questions/845058/how-to-get-line-count-of-a-large-file-cheaply-in-python
-    """
-    f = open(file_path, 'rb')
-    line_count = 0
-    buf_size = 1024 * 1024
-    read_f = f.raw.read
-
-    buf = read_f(buf_size)
-    while buf:
-        line_count += buf.count(b'\n')
-        buf = read_f(buf_size)
-
-    return line_count
 
 
 if __name__ == "__main__":
