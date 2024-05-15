@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -7,7 +8,7 @@ from pathlib import Path
 import pandas as pd
 from xml_to_dict import XMLtoDict
 # Imports below are custom
-from rht_data_engineer.lib.base import Logger, Database
+from lib.base import Logger, Database
 
 
 class Tag(StrEnum):
@@ -59,9 +60,8 @@ class RepairOrder:
     technician: str
 
 
-DATAFILE_LOCATION = Path("..") / "data"
+DEFAULT_DATAFILE_LOCATION = Path("..") / "data"
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S"
-logger = Logger().get_logger()
 
 
 def read_files_from_dir(folder: [str, Path]) -> list[str]:
@@ -132,11 +132,31 @@ def create_target_tables() -> None:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='Populated the repair order tables.')
+
+    parser.add_argument('--data-dir',
+                        metavar="/path/to/datafiles",
+                        default=DEFAULT_DATAFILE_LOCATION,
+                        help=f"Default is {DEFAULT_DATAFILE_LOCATION}. Only XML files supported.")
+    logging_group = parser.add_mutually_exclusive_group()
+    logging_group.add_argument('--verbose', action='store_true')
+    logging_group.add_argument('--terse', action='store_true')
+
+    args = parser.parse_args()
+    datafile_location = args.data_dir
+    if args.verbose:
+        logger = Logger("DEBUG").get_logger()
+    elif args.terse:
+        logger = Logger("WARNING").get_logger()
+    else:
+        logger = Logger().get_logger()
+
     # Had trouble using pandas.read_xml so used instead: https://pypi.org/project/xml-to-dict/
     repair_order_dict = dict()  # keys are order ID, values are the repair order
     repair_order_detail_dict = dict()  # keys are order ID, values are part/quantity tuples
 
-    for file_content in read_files_from_dir(DATAFILE_LOCATION):
+    for file_content in read_files_from_dir(datafile_location):
         temp_list = list()
         try:
             order_raw = parse_xml(file_content)[Tag.EVENT]
