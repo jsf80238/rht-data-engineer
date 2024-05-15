@@ -1,9 +1,11 @@
 import logging
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+
+import pandas as pd
 # Imports above are standard Python
 # Imports below are 3rd-party
 from xml_to_dict import XMLtoDict
@@ -63,7 +65,7 @@ def read_files_from_dir(folder: [str, Path]) -> list[str]:
     file_list = sorted(folder.glob("*.xml"))
     logger.info(f"Reading from folder '{folder}' ...")
     for i, file_path in enumerate(file_list, 1):
-        logger.info(f"Reading '{file_path}' ({i} of {len(file_list)}) ...")
+        logger.info(f"({i:>2} of {len(file_list)}) reading '{file_path}' ...")
         yield open(file_path).read()
 
 
@@ -82,6 +84,7 @@ def create_target_tables() -> None:
     Create target tables idempotently
     """
     mydb = Database()
+
     sql = "select count(*) from sqlite_master where type='table' and name = 'repair_order'"
     the_count = mydb.fetch_one_row(sql)
     if not the_count:
@@ -91,10 +94,12 @@ def create_target_tables() -> None:
                 timestamp text,
                 status text,
                 cost real,
-                technician text
+                technician text,
+                primary key (order_id)
             )
         """
         mydb.execute(sql)
+
     sql = "select count(*) from sqlite_master where type='table' and name = 'repair_order_detail'"
     the_count = mydb.fetch_one_row(sql)
     if not the_count:
@@ -102,10 +107,15 @@ def create_target_tables() -> None:
             create table repair_order_detail (
                 order_id integer,
                 part_name text,
-                quantity int
+                quantity int,
+                primary key (order_id, part_name),
+                foreign key (order_id) references repair_order(order_id)
             )
         """
         mydb.execute(sql)
+
+    for table_name in "repair_order_detail", "repair_order":
+        mydb.execute(f"delete from {table_name}")
 
 
 repair_order_dict = dict()  # keys are order ID, values are the repair order
@@ -150,4 +160,9 @@ for file_content in read_files_from_dir(DATAFILE_LOCATION):
         )
         repair_order_detail_dict[order_id] = temp_list.copy()
 
+# To increase the speed of insertion convert the dictionaries to dataframes
+new_dict = {k: asdict(v) for k, v in repair_order_dict.items()}
+repair_order_df = pd.DataFrame()
 create_target_tables()
+
+# Create the order records, then the order detail records
