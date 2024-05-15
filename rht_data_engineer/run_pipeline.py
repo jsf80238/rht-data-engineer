@@ -161,8 +161,28 @@ for file_content in read_files_from_dir(DATAFILE_LOCATION):
         repair_order_detail_dict[order_id] = temp_list.copy()
 
 # To increase the speed of insertion convert the dictionaries to dataframes
-new_dict = {k: asdict(v) for k, v in repair_order_dict.items()}
-repair_order_df = pd.DataFrame()
-create_target_tables()
+repair_order_df = pd.DataFrame.from_records([asdict(v) for v in repair_order_dict.values()])
+repair_order_detail_list = list()
+for v in repair_order_detail_dict.values():
+    for line_item in v:
+        repair_order_detail_list.append(asdict(line_item))
+repair_order_detail_df = pd.DataFrame.from_records(repair_order_detail_list)
 
-# Create the order records, then the order detail records
+create_target_tables()
+mydb = Database()
+# Insert the order records ...
+try:
+    table_name = "repair_order"
+    repair_order_df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
+    logger.info(f"Inserted {repair_order_df.shape[0]} rows into {table_name}.")
+except Exception as e:
+    logger.error(e)
+    exit(1)
+# ... then the order detail records
+try:
+    table_name = "repair_order_detail"
+    repair_order_detail_df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
+    logger.info(f"Inserted {repair_order_detail_df.shape[0]} rows into {table_name}.")
+except Exception as e:
+    logger.error(e)
+    exit(1)
