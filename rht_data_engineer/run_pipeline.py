@@ -46,7 +46,6 @@ class RepairOrder:
     status: Status
     cost: float
     technician: str
-    repair_parts_id: int  # key to repair_parts table 
 
 
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S"
@@ -65,7 +64,7 @@ def read_files_from_dir(folder: [str, Path]) -> list[str]:
     file_list = sorted(folder.glob("*.xml"))
     logger.info(f"Reading from folder '{folder}' ...")
     for i, file_path in enumerate(file_list, 1):
-        logger.info(f"Reading '{file_path}' ({i} of {len(file_list)} ...")
+        logger.info(f"Reading '{file_path}' ({i} of {len(file_list)}) ...")
         yield open(file_path).read()
 
 
@@ -79,25 +78,41 @@ def parse_xml(content: str) -> dict:
     return parser.parse(content)
 
 
-repair_order_dict = dict(RepairOrder)  # keys are order ID
-repair_parts_dict = dict(RepairParts)  # keys are order ID
+repair_order_dict = dict()  # keys are order ID, values are the repair order
+repair_parts_dict = dict()  # keys are order ID, values are part/quantity tuples
 
 for file_content in read_files_from_dir(DATAFILE_LOCATION):
+    temp_list = list()
     try:
         order_raw = parse_xml(file_content)[Tag.EVENT.value]
-    except Exception as e:
-        logger.error(f"Skipping because of: {e}")
-    order_id = order_raw[Tag.ORDER_ID.value]
-    try:
+        order_id = int(order_raw[Tag.ORDER_ID.value])
+        status = order_raw[Tag.STATUS.value]
+        cost = float(order_raw[Tag.COST.value])
+        technician = order_raw[Tag.REPAIR_DETAILS.value][Tag.TECHNICIAN.value]
+        parts = order_raw[Tag.REPAIR_DETAILS.value][Tag.REPAIR_PARTS.value][Tag.PART.value]
+        if isinstance(parts, dict):
+            parts = [parts]
+        for part in parts:
+            part_name = part[Tag.NAME.value]
+            part_quantity = part[Tag.QUANTITY.value]
+            temp_list.append((part_name, part_quantity))
         timestamp = order_raw[Tag.DATE_TIME.value]
         timestamp_as_datetime = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
-        print(timestamp_as_datetime)
     except Exception as e:
-        logger.error(f"Skipping because could not parse timestamp: {e}")
-    try:
+        logger.error(f"Skipping because of: {e}")
+        continue
+    if order_id in repair_order_dict:
+        logger.info(f"Will replace data for order {order_id}.")
         existing_timestamp = repair_order_dict[order_id].timestamp
-    except:
+    else:
+        logger.debug(f"We are seeing order {order_id} for the first time.")
         existing_timestamp = datetime(1, 1, 1)  # Earliest possible date
-        logger.info(f"We are seeing order {order_id} for the first time.")
     if timestamp_as_datetime > existing_timestamp:
-        pass
+        repair_order_dict[order_id] = RepairOrder(
+            order_id=order_id,
+            timestamp=timestamp_as_datetime,
+            status=status,
+            cost=cost,
+            technician=technician,
+        )
+        repair_parts_dict[order_id] = temp_list.copy()
