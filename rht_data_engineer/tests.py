@@ -5,7 +5,8 @@ from rht_data_engineer.run_pipeline import read_files_from_dir, parse_xml, Tag
 
 
 class MyTest(unittest.TestCase):
-    def get_data(self):
+    @classmethod
+    def get_data(cls) -> str:
         return """
         <event>
             <order_id>104</order_id>
@@ -29,14 +30,14 @@ class MyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdirname:
             for file_name in file_name_list:
                 with open(os.path.join(tmpdirname, file_name), "w") as writer:
-                    print(self.get_data(), file=writer)
+                    print(MyTest.get_data(), file=writer)
             for data in read_files_from_dir(tmpdirname):
                 if "Robert White" in data:
                     actual_count += 1
         self.assertEqual(expected_count, actual_count, "The expected text was not found.")
 
     def test_parse(self):
-        result_dict = parse_xml(self.get_data())
+        result_dict = parse_xml(MyTest.get_data())
         technician = result_dict[Tag.EVENT][Tag.REPAIR_DETAILS][Tag.TECHNICIAN]
         self.assertEqual("Robert White", technician, "The name is wrong.")
 

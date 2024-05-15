@@ -11,6 +11,9 @@ from rht_data_engineer.lib.base import Logger, Database
 
 
 class Tag(StrEnum):
+    """
+    Avoids typos
+    """
     EVENT = "event"
     ORDER_ID = "order_id"
     DATE_TIME = "date_time"
@@ -25,6 +28,9 @@ class Tag(StrEnum):
 
 
 class Status(StrEnum):
+    """
+    Identifies valid values
+    """
     COMPLETED = "Completed"
     IN_PROGRESS = "In Progress"
     RECEIVED = "Received"
@@ -33,6 +39,9 @@ class Status(StrEnum):
 
 @dataclass
 class RepairOrderDetail:
+    """
+    This is the child object
+    """
     order_id: int
     part_name: str
     quantity: int
@@ -40,6 +49,9 @@ class RepairOrderDetail:
 
 @dataclass
 class RepairOrder:
+    """
+    This is the parent object
+    """
     order_id: int
     timestamp: datetime
     status: Status
@@ -120,6 +132,7 @@ def create_target_tables() -> None:
 
 
 if __name__ == "__main__":
+    # Had trouble using pandas.read_xml so used instead: https://pypi.org/project/xml-to-dict/
     repair_order_dict = dict()  # keys are order ID, values are the repair order
     repair_order_detail_dict = dict()  # keys are order ID, values are part/quantity tuples
 
@@ -163,6 +176,10 @@ if __name__ == "__main__":
             repair_order_detail_dict[order_id] = temp_list.copy()
 
     # To increase the speed of insertion convert the dictionaries to dataframes
+    # and use Pandas' built-in to_sql() method.
+    # And yes, we earlier put this data into the RepairOrder and RepairOrderDetail classes
+    # only then to extract it into ordinary dictionaries.
+    # That was unnecessary, but it's a habit of mine because the dataclasses _generally_ make for more readable code.
     repair_order_df = pd.DataFrame.from_records([asdict(v) for v in repair_order_dict.values()])
     repair_order_detail_list = list()
     for v in repair_order_detail_dict.values():
@@ -175,16 +192,18 @@ if __name__ == "__main__":
     # Insert the order records ...
     try:
         table_name = "repair_order"
-        repair_order_df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
-        logger.info(f"Inserted {repair_order_df.shape[0]} rows into {table_name}.")
+        df = repair_order_df
+        df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
+        logger.info(f"Inserted {df.shape[0]} rows into {table_name}.")
     except Exception as e:
         logger.error(e)
         exit(1)
     # ... then the order detail records
     try:
         table_name = "repair_order_detail"
-        repair_order_detail_df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
-        logger.info(f"Inserted {repair_order_detail_df.shape[0]} rows into {table_name}.")
+        df = repair_order_detail_df
+        df.to_sql(table_name, mydb.get_connection(), if_exists="append", index=False)
+        logger.info(f"Inserted {df.shape[0]} rows into {table_name}.")
     except Exception as e:
         logger.error(e)
         exit(1)

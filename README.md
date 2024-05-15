@@ -12,4 +12,3 @@
         <order_id>103</order_id>
         <order_id>104</order_id>
 
-Not checking if the records are complete, for example, no order id or order id not numeric
