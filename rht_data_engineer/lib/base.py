@@ -138,8 +138,7 @@ class Database:
         else:
             identification = "<unknown>"
         # Format the SQL to fit on one line
-        formatted_sql = re.sub(r"\s+", " ", sql).strip()
-        # Make a cursor if one was not supplied by the caller
+        # formatted_sql = re.sub(r"\s+", " ", sql).strip()
         cursor = cls.get_connection().cursor()
         # Log the statement with the parameters converted to their passed values
         sql_for_logging = sql
@@ -243,22 +242,9 @@ def get_line_count(file_path: Union[str, Path]) -> int:
 if __name__ == "__main__":
     logger = Logger().get_logger()
     logger.info("a logging message")
-    # mydb = Database(
-    #     host_name="localhost",
-    #     port_number=1433,
-    #     database_name="master",
-    #     user_name="sa",
-    #     password="!1Jkrvhmhzyjwc"
-    # )
-    mydb = Database(
-        host_name="localhost",
-        port_number=5432,
-        database_name="example",
-        user_name="postgres",
-        password="password"
-    )
+    mydb = Database()
     query = """
-        SELECT * from my_table
+        select count(*) from sqlite_master where type='table' and name = 'repair_order'
         """
     cursor, column_list = mydb.execute(query)
     for item in cursor.description:

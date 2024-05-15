@@ -33,7 +33,7 @@ class Status(StrEnum):
 
 
 @dataclass
-class RepairParts:
+class RepairOrderDetail:
     order_id: int
     part_name: str
     quantity: int
@@ -50,13 +50,12 @@ class RepairOrder:
 
 TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S"
 logger = Logger().get_logger()
-# db_connection = Database().get_connection()
 
 
 def read_files_from_dir(folder: [str, Path]) -> list[str]:
     """
 
-    :param dir: /full/path/to/dir/containing/data/files
+    :param folder: /full/path/to/dir/containing/data/files
     :return: a list of dataframes, where each dataframe represents the content of a file in the given directory
     """
     if isinstance(folder, str):
@@ -71,15 +70,46 @@ def read_files_from_dir(folder: [str, Path]) -> list[str]:
 def parse_xml(content: str) -> dict:
     """
 
-    :param content:
-    :return:
+    :param content: this is the XML read from the data file
+    :return: that XML in the form of a dictionary
     """
     parser = XMLtoDict()
     return parser.parse(content)
 
 
+def create_target_tables() -> None:
+    """
+    Create target tables idempotently
+    """
+    mydb = Database()
+    sql = "select count(*) from sqlite_master where type='table' and name = 'repair_order'"
+    the_count = mydb.fetch_one_row(sql)
+    if not the_count:
+        sql = """
+            create table repair_order (
+                order_id integer,
+                timestamp text,
+                status text,
+                cost real,
+                technician text
+            )
+        """
+        mydb.execute(sql)
+    sql = "select count(*) from sqlite_master where type='table' and name = 'repair_order_detail'"
+    the_count = mydb.fetch_one_row(sql)
+    if not the_count:
+        sql = """
+            create table repair_order_detail (
+                order_id integer,
+                part_name text,
+                quantity int
+            )
+        """
+        mydb.execute(sql)
+
+
 repair_order_dict = dict()  # keys are order ID, values are the repair order
-repair_parts_dict = dict()  # keys are order ID, values are part/quantity tuples
+repair_order_detail_dict = dict()  # keys are order ID, values are part/quantity tuples
 
 for file_content in read_files_from_dir(DATAFILE_LOCATION):
     temp_list = list()
@@ -93,16 +123,19 @@ for file_content in read_files_from_dir(DATAFILE_LOCATION):
         if isinstance(parts, dict):
             parts = [parts]
         for part in parts:
-            part_name = part[Tag.NAME.value]
-            part_quantity = part[Tag.QUANTITY.value]
-            temp_list.append((part_name, part_quantity))
+            part_item = RepairOrderDetail(
+                order_id=order_id,
+                part_name=part[Tag.NAME.value],
+                quantity=part[Tag.QUANTITY.value],
+            )
+            temp_list.append(part_item)
         timestamp = order_raw[Tag.DATE_TIME.value]
         timestamp_as_datetime = datetime.strptime(timestamp, TIMESTAMP_FORMAT)
     except Exception as e:
         logger.error(f"Skipping because of: {e}")
         continue
     if order_id in repair_order_dict:
-        logger.info(f"Will replace data for order {order_id}.")
+        logger.debug(f"Will replace data for order {order_id}.")
         existing_timestamp = repair_order_dict[order_id].timestamp
     else:
         logger.debug(f"We are seeing order {order_id} for the first time.")
@@ -115,4 +148,6 @@ for file_content in read_files_from_dir(DATAFILE_LOCATION):
             cost=cost,
             technician=technician,
         )
-        repair_parts_dict[order_id] = temp_list.copy()
+        repair_order_detail_dict[order_id] = temp_list.copy()
+
+create_target_tables()
