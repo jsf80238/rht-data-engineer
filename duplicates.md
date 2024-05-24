@@ -13,7 +13,7 @@ Suppose you have a table with (potentially) duplicate rows, for example:
      Someone    | Else      | someone@example.com
     (7 rows)
 
-The task is to remove duplicate rows WITHOUT using a temporary table.
+The task is to remove duplicate rows WITHOUT using a temporary table, which would give this result:
 
     example=# select first_name, last_name, email_address from duplicates_example;
      first_name | last_name |      email_address       
@@ -23,7 +23,8 @@ The task is to remove duplicate rows WITHOUT using a temporary table.
      Someone    | Else      | someone@example.com
     (3 rows)
 
-## PostgreSQL
+## Potential Solutions
+### PostgreSQL
 Use PostgreSQL's [unique CTID row identifier](https://www.postgresql.org/docs/current/ddl-system-columns.html#DDL-SYSTEM-COLUMNS-CTID):
 
     with keepers as (
@@ -52,7 +53,7 @@ Use PostgreSQL's [unique CTID row identifier](https://www.postgresql.org/docs/cu
             keepers.max_ctid = duplicates_example.ctid
     );
 
-## Other SQL dialects
+### Other SQL dialects
 | Dialect   | Options                                                                                                                       |
 |-----------|-------------------------------------------------------------------------------------------------------------------------------|
 | Oracle    | [ROWID]( https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ROWID-Pseudocolumn.html) seems to be equivalent. |
