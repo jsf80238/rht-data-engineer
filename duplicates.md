@@ -53,8 +53,8 @@ Use PostgreSQL's [unique CTID row identifier](https://www.postgresql.org/docs/cu
     );
 
 ## Other SQL dialects
-| Dialect   | Options                                                                                                                        |
-|-----------|--------------------------------------------------------------------------------------------------------------------------------|
-| Oracle    | [ROWID] ( https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ROWID-Pseudocolumn.html) seems to be equivalent. |
-| BigQuery  | `insert overwrite into duplicates_example select distinct * from duplicates_example;`                                          |
-| Snowflake | `insert overwrite into duplicates_example select distinct * from duplicates_example;`                                          |
+| Dialect   | Options                                                                                                                       |
+|-----------|-------------------------------------------------------------------------------------------------------------------------------|
+| Oracle    | [ROWID]( https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/ROWID-Pseudocolumn.html) seems to be equivalent. |
+| BigQuery  | `insert overwrite into duplicates_example select distinct * from duplicates_example;`                                         |
+| Snowflake | `insert overwrite into duplicates_example select distinct * from duplicates_example;`                                         |
